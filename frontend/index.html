@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Insurance Dapp</title>
+
+    <script src="https://cdn.ethers.io/scripts/ethers-v4.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+
+    <script>
+
+        // override default gas for the transaction to use
+        const OVERRIDES = { gasLimit: 560000 };
+
+        let provider,
+            contractAddress,
+            insuranceContractABI,
+            localAccount,
+            contractClient;
+
+        loadConfig()
+            .then(initABI)
+            .then(initAccount)
+            .then(initContractClient)
+            .then(initComplete);
+
+        ///////////////////////////////////////////////
+
+        async function loadConfig() {
+            return fetch("config.json")
+                .then(response => response.json())
+                .then(config => {
+                    contractAddress = config.contractAddress;
+                    provider = new ethers.providers.Web3Provider(web3.currentProvider, config.network);
+                });
+        }
+
+        async function initABI() {
+            return fetch("insuranceABI.json")
+                .then(response => response.json())
+                .then(json => {
+                    insuranceContractABI = json;
+                });
+        }
+
+        async function initAccount() {
+            return provider.listAccounts()
+                .then(accounts => localAccount = accounts[0]);
+        }
+
+        async function initContractClient() {
+            const signer = provider.getSigner(localAccount);
+            contractClient = new ethers.Contract(contractAddress, insuranceContractABI, signer);
+        }
+
+        async function initComplete() {
+            $('#contractAddress').text(contractAddress);
+        }
+
+        ///////////////////////////////////////////
+
+        async function claim() {
+
+            let amount = $("#claimAmount").val();
+
+            console.log(`Attempting to claim ${amount}`);
+
+            const TX = await contractClient.claim(amount, OVERRIDES);
+
+            console.log("claim completed");
+            console.log(TX);
+        }
+
+        async function validate() {
+            const TX = await contractClient.validate(localAccount, OVERRIDES);
+            console.log(TX);
+        }
+
+    </script>
+</head>
+<body>
+
+    <label id="contractAddress"></label>
+
+    <br />
+
+    <button onclick="claim()">Claim</button>
+    <input type="number" id="claimAmount" value="300000000000000000" />
+    <br/>
+    <button onclick="validate()">Validate</button>
+
+</body>
+
+</html>
